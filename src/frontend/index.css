@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+
+    /* BOSS Storage 101 — Deep industrial dark theme */
+    --background: 0.12 0.008 240;
+    --foreground: 0.94 0.01 80;
+    --card: 0.16 0.01 240;
+    --card-foreground: 0.94 0.01 80;
+    --popover: 0.18 0.012 240;
+    --popover-foreground: 0.94 0.01 80;
+    --primary: 0.75 0.18 70;
+    --primary-foreground: 0.1 0.01 240;
+    --secondary: 0.22 0.015 240;
+    --secondary-foreground: 0.75 0.01 80;
+    --muted: 0.20 0.012 240;
+    --muted-foreground: 0.55 0.012 240;
+    --accent: 0.72 0.19 68;
+    --accent-foreground: 0.1 0.01 240;
+    --destructive: 0.6 0.22 25;
+    --destructive-foreground: 0.98 0.01 80;
+    --border: 0.28 0.015 240;
+    --input: 0.22 0.015 240;
+    --ring: 0.75 0.18 70;
+    --chart-1: 0.75 0.18 70;
+    --chart-2: 0.6 0.16 200;
+    --chart-3: 0.65 0.17 145;
+    --chart-4: 0.7 0.18 30;
+    --chart-5: 0.55 0.2 280;
+    --sidebar: 0.14 0.01 240;
+    --sidebar-foreground: 0.94 0.01 80;
+    --sidebar-primary: 0.75 0.18 70;
+    --sidebar-primary-foreground: 0.1 0.01 240;
+    --sidebar-accent: 0.22 0.015 240;
+    --sidebar-accent-foreground: 0.94 0.01 80;
+    --sidebar-border: 0.25 0.015 240;
+    --sidebar-ring: 0.75 0.18 70;
+
+    /* Custom tokens */
+    --amber-glow: 0.75 0.18 70;
+    --amber-dim: 0.55 0.14 70;
+    --surface-raised: 0.19 0.012 240;
+    --surface-hover: 0.23 0.015 240;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: oklch(var(--background));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: oklch(var(--border));
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(var(--muted-foreground));
+  }
+}
+
+@layer utilities {
+  .amber-glow-effect {
+    box-shadow: 0 0 20px oklch(var(--amber-glow) / 0.3), 0 0 40px oklch(var(--amber-glow) / 0.1);
+  }
+
+  .boss-header-bg {
+    background:
+      radial-gradient(ellipse at 15% 50%, oklch(var(--amber-glow) / 0.07) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 30%, oklch(0.55 0.15 200 / 0.05) 0%, transparent 50%),
+      oklch(var(--background));
+  }
+
+  .card-lift {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px oklch(0 0 0 / 0.5), 0 0 0 1px oklch(var(--amber-glow) / 0.25);
+  }
+
+  .card-selected {
+    box-shadow: 0 0 0 2px oklch(var(--amber-glow)), 0 8px 30px oklch(var(--amber-glow) / 0.15);
+    border-color: oklch(var(--amber-glow)) !important;
+  }
+
+  .drop-zone-active {
+    border-color: oklch(var(--amber-glow)) !important;
+    background: radial-gradient(ellipse at center, oklch(var(--amber-glow) / 0.06) 0%, transparent 70%);
+    box-shadow: 0 0 0 1px oklch(var(--amber-glow) / 0.5), inset 0 0 30px oklch(var(--amber-glow) / 0.04);
+  }
+
+  .progress-amber {
+    background: linear-gradient(90deg, oklch(var(--amber-glow) / 0.8), oklch(var(--amber-glow)));
+  }
+}
+
+/* Equalizer animation for music player */
+@keyframes eq-bar1 {
+  0%   { height: 30%; }
+  100% { height: 90%; }
+}
+@keyframes eq-bar2 {
+  0%   { height: 80%; }
+  100% { height: 20%; }
+}
+@keyframes eq-bar3 {
+  0%   { height: 50%; }
+  100% { height: 100%; }
+}
+
+/* Volume slider thumb styling */
+input[type="range"].appearance-none::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: oklch(var(--amber-glow));
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+input[type="range"].appearance-none::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+input[type="range"].appearance-none::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: oklch(var(--amber-glow));
+  border: none;
+  cursor: pointer;
+}
