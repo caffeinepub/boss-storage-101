@@ -47,6 +47,7 @@ interface FileCardProps {
   onSelect: (fileId: string) => void;
   onDelete: (fileId: string) => void;
   onOpenLightbox?: (file: FileMetadata) => void;
+  onOpenVideoPlayer?: (file: FileMetadata) => void;
   index: number;
   folders?: Folder[];
   currentFolderName?: string;
@@ -112,6 +113,7 @@ export function FileCard({
   onSelect,
   onDelete,
   onOpenLightbox,
+  onOpenVideoPlayer,
   index,
   folders = [],
   currentFolderName,
@@ -171,6 +173,7 @@ export function FileCard({
         onSelect={handleCheckbox}
         onDelete={handleDelete}
         onDownload={handleDownload}
+        onOpenVideoPlayer={() => onOpenVideoPlayer?.(file)}
         index={index}
         folders={folders}
         currentFolderName={currentFolderName}
@@ -374,6 +377,7 @@ interface VideoCardProps {
   onSelect: (e: React.MouseEvent) => void;
   onDelete: (e: React.MouseEvent) => void;
   onDownload: (e: React.MouseEvent) => void;
+  onOpenVideoPlayer?: () => void;
   index: number;
   folders?: Folder[];
   currentFolderName?: string;
@@ -386,6 +390,7 @@ function VideoCard({
   onSelect,
   onDelete,
   onDownload,
+  onOpenVideoPlayer,
   index,
   folders = [],
   currentFolderName,
@@ -409,14 +414,19 @@ function VideoCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.3 }}
-      className={`group relative rounded-lg border bg-card card-lift ${
+      className={`group relative rounded-lg border bg-card card-lift cursor-pointer ${
         isSelected ? "card-selected" : "border-border"
       }`}
+      onClick={onOpenVideoPlayer}
     >
       <div className="p-4">
         <div className="flex items-start gap-3">
-          <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg border border-violet-500/20 bg-violet-500/10 shrink-0">
-            <Film className="w-5 h-5 text-violet-400" />
+          {/* Icon with play overlay on hover */}
+          <div className="relative flex flex-col items-center justify-center w-10 h-10 rounded-lg border border-violet-500/20 bg-violet-500/10 shrink-0">
+            <Film className="w-5 h-5 text-violet-400 transition-opacity duration-200 group-hover:opacity-0" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <Play className="w-5 h-5 text-violet-300 fill-violet-300" />
+            </div>
           </div>
 
           <div className="flex-1 min-w-0">
@@ -463,7 +473,10 @@ function VideoCard({
             size="sm"
             variant="ghost"
             className="flex-1 h-7 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
-            onClick={onDownload}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload(e);
+            }}
           >
             <Download className="w-3 h-3" />
             Download
@@ -487,7 +500,10 @@ function VideoCard({
             size="sm"
             variant="ghost"
             className="flex-1 h-7 text-xs gap-1.5 text-destructive/80 hover:text-destructive hover:bg-destructive/10"
-            onClick={onDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(e);
+            }}
           >
             <Trash2 className="w-3 h-3" />
             Delete

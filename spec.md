@@ -1,25 +1,25 @@
 # BOSS Storage 101
 
 ## Current State
-A full-stack file storage app with drag-and-drop uploads, folder organization, file grid with tabs (All, Photos, PDFs, MP3s, Videos, HEIC), audio playback on cards, photo lightbox, select/delete, and PWA support.
+VideoCard in FileCard.tsx shows a film icon, filename, size, and date with Download/Move/Delete buttons. There is no way to play a video inline or in a lightbox -- clicking the card does nothing.
 
 ## Requested Changes (Diff)
 
 ### Add
-- **Photo Album view**: A dedicated full-screen slideshow/gallery mode that displays only photos in a beautiful album layout with smooth transitions between slides.
-- **Background music player**: A persistent mini music player bar (bottom of screen) that allows the user to pick any uploaded audio file and play it as background music while browsing or viewing the photo album. Controls: play/pause, previous/next track, track name display, volume slider.
-- **Album mode toggle**: A button in the header or file grid toolbar to switch between the standard file grid view and the Photo Album view.
-- **Slideshow auto-advance**: Optional auto-advance toggle in album mode that cycles through photos every few seconds.
+- Video player lightbox/modal: clicking a video card opens a full-screen overlay with a native HTML5 `<video>` element, play/pause/seek controls, close button (Escape key and X button), and the filename in the header.
+- VideoLightbox component (new file `src/components/VideoLightbox.tsx`) similar in structure to PhotoLightbox but renders a `<video>` tag with `controls` and `autoPlay`.
+- A play-button overlay on the VideoCard thumbnail area so it looks clickable.
 
 ### Modify
-- **App.tsx**: Add state for music player (current track, playing state) and album mode toggle. Pass music context down or use a simple state.
-- **FileGrid.tsx**: Add "Album View" button in the toolbar when photos exist.
+- `VideoCard` in `FileCard.tsx`: add a clickable area (play icon overlay over the film icon) that triggers `onOpenVideoPlayer` callback.
+- `FileGrid.tsx`: manage `videoLightboxFile` state, pass `onOpenVideoPlayer` to `FileCard`, and render `<VideoLightbox>` when a video file is selected.
+- `FileCard.tsx`: add `onOpenVideoPlayer` optional prop to `FileCardProps` and pass it through to `VideoCard`.
 
 ### Remove
 - Nothing removed.
 
 ## Implementation Plan
-1. Create `MusicPlayer` component -- persistent bottom bar, reads audio files from the file list, play/pause/next/prev controls, volume, track name. Uses same audio loading pattern as AudioCard.
-2. Create `PhotoAlbum` component -- full-screen grid or slideshow of photos with navigation arrows, auto-advance toggle, and a close button to return to grid view.
-3. Update `App.tsx` -- add `albumMode` state, `musicPlayer` state (current track index, playing), render `MusicPlayer` always when audio files exist, show `PhotoAlbum` when `albumMode` is true.
-4. Update `FileGrid.tsx` -- add "Photo Album" button in toolbar when `tabCounts.photos > 0`, calls `onOpenAlbum` prop.
+1. Create `src/components/VideoLightbox.tsx`: accepts `file: FileMetadata` and `onClose: () => void`. Loads video blob URL on mount, renders a dark overlay with centered `<video controls autoPlay>`, filename header, and close button. Supports Escape key to close.
+2. Update `VideoCard` in `FileCard.tsx`: add `onOpenVideoPlayer?: () => void` prop. Make the icon area / card header clickable with a Play icon overlay. Stop propagation on Download/Folder/Delete buttons.
+3. Update `FileCard` component: add `onOpenVideoPlayer` to `FileCardProps`, pass to `VideoCard`.
+4. Update `FileGrid.tsx`: add `videoLightboxFile` state (`FileMetadata | null`), wire `onOpenVideoPlayer` on `FileCard` to set that state, render `<VideoLightbox>` when state is set.

@@ -21,6 +21,7 @@ import { downloadFile, isVideoMime } from "../utils/fileUtils";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { FileCard } from "./FileCard";
 import { PhotoLightbox } from "./PhotoLightbox";
+import { VideoLightbox } from "./VideoLightbox";
 
 type FilterTab = "all" | "photos" | "videos" | "pdfs" | "audio" | "heic";
 
@@ -42,6 +43,8 @@ export function FileGrid({
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [videoLightboxFile, setVideoLightboxFile] =
+    useState<FileMetadata | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     ids: string[];
     filename?: string;
@@ -391,6 +394,7 @@ export function FileGrid({
               onSelect={handleSelect}
               onDelete={handleDeleteSingle}
               onOpenLightbox={handleOpenLightbox}
+              onOpenVideoPlayer={(f) => setVideoLightboxFile(f)}
               index={index}
               folders={folders}
               currentFolderName={selectedFolderName}
@@ -399,13 +403,21 @@ export function FileGrid({
         </div>
       )}
 
-      {/* Lightbox */}
+      {/* Photo Lightbox */}
       {lightboxIndex !== null && (
         <PhotoLightbox
           files={files}
           currentIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}
+        />
+      )}
+
+      {/* Video Lightbox */}
+      {videoLightboxFile && (
+        <VideoLightbox
+          file={videoLightboxFile}
+          onClose={() => setVideoLightboxFile(null)}
         />
       )}
 
