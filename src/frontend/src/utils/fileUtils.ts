@@ -1,3 +1,4 @@
+import type { FileMetadata } from "../backend.d";
 import { FileCategory } from "../backend.d";
 
 export function isVideoMime(mimeType: string): boolean {
@@ -110,6 +111,16 @@ export async function extractExifDate(file: File): Promise<bigint | null> {
   } catch {
     return null;
   }
+}
+
+export function findDuplicates(files: FileMetadata[]): FileMetadata[][] {
+  const groups = new Map<string, FileMetadata[]>();
+  for (const file of files) {
+    const key = `${file.originalFilename}__${file.sizeBytes}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(file);
+  }
+  return Array.from(groups.values()).filter((g) => g.length > 1);
 }
 
 export function getFileExtension(filename: string): string {

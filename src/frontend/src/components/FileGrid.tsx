@@ -7,6 +7,7 @@ import {
   CloudUpload,
   Download,
   ImagePlay,
+  ScanSearch,
   Square,
   Trash2,
 } from "lucide-react";
@@ -17,8 +18,9 @@ import type { FileMetadata } from "../backend.d";
 import { FileCategory } from "../backend.d";
 import type { Folder } from "../hooks/useQueries";
 import { useDeleteFile, useDeleteFiles } from "../hooks/useQueries";
-import { downloadFile, isVideoMime } from "../utils/fileUtils";
+import { downloadFile, findDuplicates, isVideoMime } from "../utils/fileUtils";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import { DuplicatesDialog } from "./DuplicatesDialog";
 import { FileCard } from "./FileCard";
 import { PhotoLightbox } from "./PhotoLightbox";
 import { VideoLightbox } from "./VideoLightbox";
@@ -49,6 +51,13 @@ export function FileGrid({
     ids: string[];
     filename?: string;
   } | null>(null);
+
+  const [duplicateGroups, setDuplicateGroups] = useState<FileMetadata[][]>([]);
+  const [duplicatesOpen, setDuplicatesOpen] = useState(false);
+  const [pendingDownload, setPendingDownload] = useState<
+    (() => Promise<void>) | null
+  >(null);
+  const [isDeletingDuplicates, setIsDeletingDuplicates] = useState(false);
 
   const { mutateAsync: deleteFile, isPending: isDeletingSingle } =
     useDeleteFile();
@@ -139,33 +148,70 @@ export function FileGrid({
     [photoFiles],
   );
 
-  const handleDownloadAll = useCallback(async () => {
-    const filesToDownload = filteredFiles;
-    if (filesToDownload.length === 0) return;
-    toast.info(`Downloading ${filesToDownload.length} file(s)...`);
-    for (const file of filesToDownload) {
-      try {
-        await downloadFile(file.blob, file.originalFilename);
-        await new Promise((res) => setTimeout(res, 200));
-      } catch {
-        toast.error(`Failed to download "${file.originalFilename}"`);
+  const checkDuplicatesBeforeDownload = useCallback(
+    (filesToCheck: FileMetadata[], downloadFn: () => Promise<void>) => {
+      const dupes = findDuplicates(
+        filesToCheck.filter(
+          (f) => f.category === FileCategory.photo || isVideoMime(f.mimeType),
+        ),
+      );
+      if (dupes.length > 0) {
+        setDuplicateGroups(dupes);
+        setPendingDownload(() => downloadFn);
+        setDuplicatesOpen(true);
+      } else {
+        void downloadFn();
       }
-    }
-  }, [filteredFiles]);
+    },
+    [],
+  );
 
-  const handleDownloadMediaFiles = useCallback(async () => {
+  const handleDownloadAll = useCallback(() => {
+    if (filteredFiles.length === 0) return;
+    const actualDownload = async () => {
+      toast.info(`Downloading ${filteredFiles.length} file(s)...`);
+      for (const file of filteredFiles) {
+        try {
+          await downloadFile(file.blob, file.originalFilename);
+          await new Promise((res) => setTimeout(res, 200));
+        } catch {
+          toast.error(`Failed to download "${file.originalFilename}"`);
+        }
+      }
+    };
+    checkDuplicatesBeforeDownload(filteredFiles, actualDownload);
+  }, [filteredFiles, checkDuplicatesBeforeDownload]);
+
+  const handleDownloadMediaFiles = useCallback(() => {
     const mediaFiles = files.filter(
       (f) => f.category === FileCategory.photo || isVideoMime(f.mimeType),
     );
     if (mediaFiles.length === 0) return;
-    toast.info(`Downloading ${mediaFiles.length} photos & videos...`);
-    for (const file of mediaFiles) {
-      try {
-        await downloadFile(file.blob, file.originalFilename);
-        await new Promise((res) => setTimeout(res, 200));
-      } catch {
-        toast.error(`Failed to download "${file.originalFilename}"`);
+    const actualDownload = async () => {
+      toast.info(`Downloading ${mediaFiles.length} photos & videos...`);
+      for (const file of mediaFiles) {
+        try {
+          await downloadFile(file.blob, file.originalFilename);
+          await new Promise((res) => setTimeout(res, 200));
+        } catch {
+          toast.error(`Failed to download "${file.originalFilename}"`);
+        }
       }
+    };
+    checkDuplicatesBeforeDownload(mediaFiles, actualDownload);
+  }, [files, checkDuplicatesBeforeDownload]);
+
+  const handleFindDuplicates = useCallback(() => {
+    const mediaFiles = files.filter(
+      (f) => f.category === FileCategory.photo || isVideoMime(f.mimeType),
+    );
+    const dupes = findDuplicates(mediaFiles);
+    if (dupes.length === 0) {
+      toast.success("No duplicate photos or videos found");
+    } else {
+      setDuplicateGroups(dupes);
+      setPendingDownload(null);
+      setDuplicatesOpen(true);
     }
   }, [files]);
 
@@ -281,6 +327,18 @@ export function FileGrid({
             >
               <BookImage className="w-3.5 h-3.5" />
               Album
+            </Button>
+          )}
+
+          {files.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1.5 text-muted-foreground border-border hover:bg-muted/50 hover:text-foreground"
+              onClick={handleFindDuplicates}
+            >
+              <ScanSearch className="w-3.5 h-3.5" />
+              Find Duplicates
             </Button>
           )}
 
@@ -429,6 +487,37 @@ export function FileGrid({
         count={deleteTarget?.ids.length ?? 0}
         filename={deleteTarget?.filename}
         isLoading={isDeletingSingle || isDeletingMultiple}
+      />
+
+      {/* Duplicates dialog */}
+      <DuplicatesDialog
+        open={duplicatesOpen}
+        onClose={() => {
+          setDuplicatesOpen(false);
+          setPendingDownload(null);
+        }}
+        duplicateGroups={duplicateGroups}
+        downloadMode={pendingDownload !== null}
+        onDeleteAndDownload={async (ids) => {
+          setIsDeletingDuplicates(true);
+          try {
+            await deleteFiles(ids);
+            toast.success(`${ids.length} duplicate(s) deleted`);
+            setDuplicatesOpen(false);
+            await pendingDownload?.();
+          } catch {
+            toast.error("Failed to delete duplicates");
+          } finally {
+            setIsDeletingDuplicates(false);
+            setPendingDownload(null);
+          }
+        }}
+        onSkipAndDownload={async () => {
+          setDuplicatesOpen(false);
+          await pendingDownload?.();
+          setPendingDownload(null);
+        }}
+        isDeleting={isDeletingDuplicates}
       />
     </div>
   );

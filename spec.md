@@ -1,25 +1,23 @@
 # BOSS Storage 101
 
 ## Current State
-VideoCard in FileCard.tsx shows a film icon, filename, size, and date with Download/Move/Delete buttons. There is no way to play a video inline or in a lightbox -- clicking the card does nothing.
+A full-stack ICP storage app with drag-and-drop upload (photos, videos, PDFs, MP3s, HEIC), folder organisation, photo lightbox, video lightbox, music player, photo album slideshow, and bulk download buttons. Download flows: per-file download button, "Download All" (current tab), and "Download Videos & Photos" (all media). No duplicate detection exists.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Video player lightbox/modal: clicking a video card opens a full-screen overlay with a native HTML5 `<video>` element, play/pause/seek controls, close button (Escape key and X button), and the filename in the header.
-- VideoLightbox component (new file `src/components/VideoLightbox.tsx`) similar in structure to PhotoLightbox but renders a `<video>` tag with `controls` and `autoPlay`.
-- A play-button overlay on the VideoCard thumbnail area so it looks clickable.
+- Duplicate detection utility: before any download starts, scan the file list for duplicates (same filename AND same file size). Group them into duplicate sets.
+- `DuplicatesDialog` component: a modal that shows when duplicates are found before a download. Lists each duplicate group with thumbnails/icons, file names, sizes, and upload dates. User can select which copies to delete (defaults to keeping the newest, pre-selecting the older ones for deletion). Has "Delete Selected & Download", "Skip & Download Anyway", and "Cancel" actions.
+- Duplicate detection hook in `FileGrid` that intercepts all three download entry points (per-file download does NOT trigger it; only batch downloads trigger it): "Download All", "Download Videos & Photos". Also add a standalone "Find Duplicates" button in the toolbar that opens the dialog without triggering a download.
 
 ### Modify
-- `VideoCard` in `FileCard.tsx`: add a clickable area (play icon overlay over the film icon) that triggers `onOpenVideoPlayer` callback.
-- `FileGrid.tsx`: manage `videoLightboxFile` state, pass `onOpenVideoPlayer` to `FileCard`, and render `<VideoLightbox>` when a video file is selected.
-- `FileCard.tsx`: add `onOpenVideoPlayer` optional prop to `FileCardProps` and pass it through to `VideoCard`.
+- `FileGrid.tsx`: add duplicate check before `handleDownloadAll` and `handleDownloadMediaFiles`. If duplicates found, open `DuplicatesDialog` and wait for resolution before proceeding with download. Add a "Find Duplicates" toolbar button that opens the dialog in inspect-only mode.
+- `fileUtils.ts`: add `findDuplicates(files: FileMetadata[])` utility that groups files by `originalFilename + sizeBytes` and returns groups with more than one file.
 
 ### Remove
 - Nothing removed.
 
 ## Implementation Plan
-1. Create `src/components/VideoLightbox.tsx`: accepts `file: FileMetadata` and `onClose: () => void`. Loads video blob URL on mount, renders a dark overlay with centered `<video controls autoPlay>`, filename header, and close button. Supports Escape key to close.
-2. Update `VideoCard` in `FileCard.tsx`: add `onOpenVideoPlayer?: () => void` prop. Make the icon area / card header clickable with a Play icon overlay. Stop propagation on Download/Folder/Delete buttons.
-3. Update `FileCard` component: add `onOpenVideoPlayer` to `FileCardProps`, pass to `VideoCard`.
-4. Update `FileGrid.tsx`: add `videoLightboxFile` state (`FileMetadata | null`), wire `onOpenVideoPlayer` on `FileCard` to set that state, render `<VideoLightbox>` when state is set.
+1. Add `findDuplicates` utility to `fileUtils.ts` -- groups files sharing the same filename and size into arrays.
+2. Create `DuplicatesDialog.tsx` -- modal component that receives duplicate groups and a pending download callback. Shows each group as a card with file icon/thumbnail, name, size, date. Checkboxes to select files for deletion (older copies pre-selected). Buttons: "Delete & Download", "Download Anyway", "Cancel".
+3. Update `FileGrid.tsx`: import and use `findDuplicates`; add state for `duplicatesDialogOpen`, `pendingDownloadFn`, `duplicateGroups`; wrap `handleDownloadAll` and `handleDownloadMediaFiles` to check duplicates first; add "Find Duplicates" button in toolbar (visible when files.length > 0).
