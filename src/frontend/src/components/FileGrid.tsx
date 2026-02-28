@@ -69,7 +69,7 @@ export function FileGrid({
       case "photos":
         return f.category === FileCategory.photo;
       case "videos":
-        return isVideoMime(f.mimeType);
+        return f.category === FileCategory.video || isVideoMime(f.mimeType);
       case "pdfs":
         return f.category === FileCategory.pdf;
       case "audio":
@@ -152,7 +152,10 @@ export function FileGrid({
     (filesToCheck: FileMetadata[], downloadFn: () => Promise<void>) => {
       const dupes = findDuplicates(
         filesToCheck.filter(
-          (f) => f.category === FileCategory.photo || isVideoMime(f.mimeType),
+          (f) =>
+            f.category === FileCategory.photo ||
+            f.category === FileCategory.video ||
+            isVideoMime(f.mimeType),
         ),
       );
       if (dupes.length > 0) {
@@ -184,7 +187,10 @@ export function FileGrid({
 
   const handleDownloadMediaFiles = useCallback(() => {
     const mediaFiles = files.filter(
-      (f) => f.category === FileCategory.photo || isVideoMime(f.mimeType),
+      (f) =>
+        f.category === FileCategory.photo ||
+        f.category === FileCategory.video ||
+        isVideoMime(f.mimeType),
     );
     if (mediaFiles.length === 0) return;
     const actualDownload = async () => {
@@ -203,7 +209,10 @@ export function FileGrid({
 
   const handleFindDuplicates = useCallback(() => {
     const mediaFiles = files.filter(
-      (f) => f.category === FileCategory.photo || isVideoMime(f.mimeType),
+      (f) =>
+        f.category === FileCategory.photo ||
+        f.category === FileCategory.video ||
+        isVideoMime(f.mimeType),
     );
     const dupes = findDuplicates(mediaFiles);
     if (dupes.length === 0) {
@@ -218,14 +227,19 @@ export function FileGrid({
   const tabCounts = {
     all: files.length,
     photos: files.filter((f) => f.category === FileCategory.photo).length,
-    videos: files.filter((f) => isVideoMime(f.mimeType)).length,
+    videos: files.filter(
+      (f) => f.category === FileCategory.video || isVideoMime(f.mimeType),
+    ).length,
     pdfs: files.filter((f) => f.category === FileCategory.pdf).length,
     audio: files.filter((f) => f.category === FileCategory.audio).length,
     heic: files.filter((f) => f.category === FileCategory.heic).length,
   };
 
   const mediaFilesCount = files.filter(
-    (f) => f.category === FileCategory.photo || isVideoMime(f.mimeType),
+    (f) =>
+      f.category === FileCategory.photo ||
+      f.category === FileCategory.video ||
+      isVideoMime(f.mimeType),
   ).length;
 
   const selectedInView = filteredFiles.filter((f) =>

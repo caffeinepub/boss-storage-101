@@ -14,6 +14,7 @@ export type ExternalBlob = Uint8Array;
 export type FileCategory = { 'pdf' : null } |
   { 'audio' : null } |
   { 'other' : null } |
+  { 'video' : null } |
   { 'heic' : null } |
   { 'photo' : null };
 export interface FileMetadata {

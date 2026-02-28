@@ -121,6 +121,7 @@ export enum FileCategory {
     pdf = "pdf",
     audio = "audio",
     other = "other",
+    video = "video",
     heic = "heic",
     photo = "photo"
 }
@@ -446,11 +447,13 @@ function from_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Ui
 } | {
     other: null;
 } | {
+    video: null;
+} | {
     heic: null;
 } | {
     photo: null;
 }): FileCategory {
-    return "pdf" in value ? FileCategory.pdf : "audio" in value ? FileCategory.audio : "other" in value ? FileCategory.other : "heic" in value ? FileCategory.heic : "photo" in value ? FileCategory.photo : value;
+    return "pdf" in value ? FileCategory.pdf : "audio" in value ? FileCategory.audio : "other" in value ? FileCategory.other : "video" in value ? FileCategory.video : "heic" in value ? FileCategory.heic : "photo" in value ? FileCategory.photo : value;
 }
 async function from_candid_vec_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_FileMetadata>): Promise<Array<FileMetadata>> {
     return await Promise.all(value.map(async (x)=>await from_candid_FileMetadata_n8(_uploadFile, _downloadFile, x)));
@@ -489,6 +492,8 @@ function to_candid_variant_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint
 } | {
     other: null;
 } | {
+    video: null;
+} | {
     heic: null;
 } | {
     photo: null;
@@ -499,6 +504,8 @@ function to_candid_variant_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint
         audio: null
     } : value == FileCategory.other ? {
         other: null
+    } : value == FileCategory.video ? {
+        video: null
     } : value == FileCategory.heic ? {
         heic: null
     } : value == FileCategory.photo ? {

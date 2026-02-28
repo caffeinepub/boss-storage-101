@@ -53,6 +53,34 @@ export function DropZone({ folderId }: DropZoneProps) {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const { mutateAsync: uploadFile } = useUploadFile();
 
+  const inferMimeType = useCallback((file: File): string => {
+    if (file.type) return file.type;
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    const extMap: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      webp: "image/webp",
+      heic: "image/heic",
+      heif: "image/heif",
+      pdf: "application/pdf",
+      mp3: "audio/mpeg",
+      wav: "audio/wav",
+      ogg: "audio/ogg",
+      aac: "audio/aac",
+      mp4: "video/mp4",
+      mov: "video/quicktime",
+      avi: "video/x-msvideo",
+      webm: "video/webm",
+      mkv: "video/x-matroska",
+      m4v: "video/x-m4v",
+      mpeg: "video/mpeg",
+      mpg: "video/mpeg",
+    };
+    return extMap[ext] ?? "application/octet-stream";
+  }, []);
+
   const processFile = useCallback(
     async (file: File) => {
       const fileId = crypto.randomUUID();
@@ -66,13 +94,14 @@ export function DropZone({ folderId }: DropZoneProps) {
       setUploadingFiles((prev) => [...prev, uploadEntry]);
 
       try {
+        const mimeType = inferMimeType(file);
         const [arrayBuffer, exifTimestamp] = await Promise.all([
           file.arrayBuffer(),
           extractExifDate(file),
         ]);
 
         const uint8Array = new Uint8Array(arrayBuffer);
-        const category = getMimeTypeCategory(file.type);
+        const category = getMimeTypeCategory(mimeType);
 
         const blobWithProgress = ExternalBlob.fromBytes(
           uint8Array,
@@ -87,7 +116,7 @@ export function DropZone({ folderId }: DropZoneProps) {
         await uploadFile({
           fileId,
           originalFilename: file.name,
-          mimeType: file.type || "application/octet-stream",
+          mimeType,
           sizeBytes: BigInt(file.size),
           exifCaptureTimestamp: exifTimestamp,
           category,
@@ -103,24 +132,43 @@ export function DropZone({ folderId }: DropZoneProps) {
         setUploadingFiles((prev) => prev.filter((f) => f.id !== fileId));
       }
     },
-    [uploadFile, folderId],
+    [uploadFile, folderId, inferMimeType],
   );
+
+  const ACCEPTED_EXTENSIONS = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".heic",
+    ".heif",
+    ".pdf",
+    ".mp3",
+    ".wav",
+    ".ogg",
+    ".aac",
+    ".mp4",
+    ".mov",
+    ".avi",
+    ".webm",
+    ".mkv",
+    ".m4v",
+    ".mpeg",
+    ".mpg",
+  ];
 
   const handleFiles = useCallback(
     (files: FileList | File[]) => {
       const fileArray = Array.from(files);
       const valid = fileArray.filter((f) => {
+        const ext = `.${f.name.split(".").pop()?.toLowerCase()}`;
         const ok =
           ACCEPTED_MIME_TYPES.includes(f.type) ||
           f.type.startsWith("video/") ||
-          f.name.toLowerCase().endsWith(".heic") ||
-          f.name.toLowerCase().endsWith(".heif") ||
-          f.name.toLowerCase().endsWith(".mp4") ||
-          f.name.toLowerCase().endsWith(".mov") ||
-          f.name.toLowerCase().endsWith(".avi") ||
-          f.name.toLowerCase().endsWith(".webm") ||
-          f.name.toLowerCase().endsWith(".mkv") ||
-          f.name.toLowerCase().endsWith(".m4v");
+          f.type.startsWith("image/") ||
+          f.type.startsWith("audio/") ||
+          ACCEPTED_EXTENSIONS.includes(ext);
         if (!ok) toast.error(`"${f.name}" is not a supported file type`);
         return ok;
       });

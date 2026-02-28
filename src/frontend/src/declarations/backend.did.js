@@ -30,6 +30,7 @@ export const FileCategory = IDL.Variant({
   'pdf' : IDL.Null,
   'audio' : IDL.Null,
   'other' : IDL.Null,
+  'video' : IDL.Null,
   'heic' : IDL.Null,
   'photo' : IDL.Null,
 });
@@ -130,6 +131,7 @@ export const idlFactory = ({ IDL }) => {
     'pdf' : IDL.Null,
     'audio' : IDL.Null,
     'other' : IDL.Null,
+    'video' : IDL.Null,
     'heic' : IDL.Null,
     'photo' : IDL.Null,
   });

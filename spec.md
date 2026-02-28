@@ -1,23 +1,26 @@
 # BOSS Storage 101
 
 ## Current State
-A full-stack ICP storage app with drag-and-drop upload (photos, videos, PDFs, MP3s, HEIC), folder organisation, photo lightbox, video lightbox, music player, photo album slideshow, and bulk download buttons. Download flows: per-file download button, "Download All" (current tab), and "Download Videos & Photos" (all media). No duplicate detection exists.
+A full-stack personal cloud storage app with drag-and-drop file uploads (photos, PDFs, MP3s, HEIC, videos), folder management, photo album/slideshow, music player, video playback, duplicate detection, and PWA support.
+
+The backend `FileCategory` type is `{ #photo; #pdf; #audio; #heic; #other }` -- it does NOT have a `#video` variant. Video files are therefore stored with category `#other`, which causes the frontend to misclassify them and display them inconsistently.
+
+Additionally, in `DropZone.tsx`, files with an empty or missing MIME type (common on some mobile browsers and OS drag-and-drop events) are silently rejected because the validation only checks MIME type without a proper extension-only fallback.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Duplicate detection utility: before any download starts, scan the file list for duplicates (same filename AND same file size). Group them into duplicate sets.
-- `DuplicatesDialog` component: a modal that shows when duplicates are found before a download. Lists each duplicate group with thumbnails/icons, file names, sizes, and upload dates. User can select which copies to delete (defaults to keeping the newest, pre-selecting the older ones for deletion). Has "Delete Selected & Download", "Skip & Download Anyway", and "Cancel" actions.
-- Duplicate detection hook in `FileGrid` that intercepts all three download entry points (per-file download does NOT trigger it; only batch downloads trigger it): "Download All", "Download Videos & Photos". Also add a standalone "Find Duplicates" button in the toolbar that opens the dialog without triggering a download.
+- `#video` variant to `FileCategory` in the backend
 
 ### Modify
-- `FileGrid.tsx`: add duplicate check before `handleDownloadAll` and `handleDownloadMediaFiles`. If duplicates found, open `DuplicatesDialog` and wait for resolution before proceeding with download. Add a "Find Duplicates" toolbar button that opens the dialog in inspect-only mode.
-- `fileUtils.ts`: add `findDuplicates(files: FileMetadata[])` utility that groups files by `originalFilename + sizeBytes` and returns groups with more than one file.
+- `getMimeTypeCategory` in `fileUtils.ts` -- return `FileCategory.video` for `video/*` MIME types
+- `DropZone.tsx` `handleFiles` -- add fallback: if MIME type is empty, infer it from the file extension before rejecting
 
 ### Remove
-- Nothing removed.
+- Nothing removed
 
 ## Implementation Plan
-1. Add `findDuplicates` utility to `fileUtils.ts` -- groups files sharing the same filename and size into arrays.
-2. Create `DuplicatesDialog.tsx` -- modal component that receives duplicate groups and a pending download callback. Shows each group as a card with file icon/thumbnail, name, size, date. Checkboxes to select files for deletion (older copies pre-selected). Buttons: "Delete & Download", "Download Anyway", "Cancel".
-3. Update `FileGrid.tsx`: import and use `findDuplicates`; add state for `duplicatesDialogOpen`, `pendingDownloadFn`, `duplicateGroups`; wrap `handleDownloadAll` and `handleDownloadMediaFiles` to check duplicates first; add "Find Duplicates" button in toolbar (visible when files.length > 0).
+1. Regenerate the Motoko backend with `FileCategory = { #photo; #pdf; #audio; #heic; #video; #other }` and all existing endpoints preserved
+2. Update `getMimeTypeCategory` in `fileUtils.ts` to map `video/*` to `FileCategory.video`
+3. Update `DropZone.tsx` `handleFiles` to accept files with empty MIME type if the extension matches a supported video or image format
+4. Update `getCategoryLabel` in `fileUtils.ts` to return "Video" for the video category

@@ -18,7 +18,9 @@ export function getMimeTypeCategory(mimeType: string): FileCategory {
   if (mimeType.startsWith("audio/")) {
     return FileCategory.audio;
   }
-  // video/* and everything else stored as "other"
+  if (mimeType.startsWith("video/")) {
+    return FileCategory.video;
+  }
   return FileCategory.other;
 }
 
@@ -138,6 +140,8 @@ export function getCategoryLabel(category: FileCategory): string {
       return "MP3";
     case FileCategory.heic:
       return "HEIC";
+    case FileCategory.video:
+      return "Video";
     default:
       return "File";
   }

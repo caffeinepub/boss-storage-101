@@ -5,15 +5,17 @@ import Time "mo:core/Time";
 import Map "mo:core/Map";
 import Order "mo:core/Order";
 import Runtime "mo:core/Runtime";
+import Migration "migration";
 
 import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
 
-
+// Use new migration approach with an additional migration module
+(with migration = Migration.run)
 actor {
   include MixinStorage();
 
-  type FileCategory = { #photo; #pdf; #audio; #heic; #other };
+  type FileCategory = { #photo; #pdf; #audio; #heic; #other; #video };
 
   type FileMetadata = {
     fileId : Text;

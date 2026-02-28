@@ -35,6 +35,7 @@ export enum FileCategory {
     pdf = "pdf",
     audio = "audio",
     other = "other",
+    video = "video",
     heic = "heic",
     photo = "photo"
 }

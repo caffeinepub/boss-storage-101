@@ -126,7 +126,8 @@ export function FileCard({
   const isPdf = file.category === FileCategory.pdf;
   const isAudio = file.category === FileCategory.audio;
   const isHeic = file.category === FileCategory.heic;
-  const isVideo = isVideoMime(file.mimeType);
+  const isVideo =
+    file.category === FileCategory.video || isVideoMime(file.mimeType);
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
