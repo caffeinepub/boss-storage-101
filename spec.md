@@ -1,26 +1,31 @@
 # BOSS Storage 101
 
 ## Current State
-A full-stack personal cloud storage app with drag-and-drop file uploads (photos, PDFs, MP3s, HEIC, videos), folder management, photo album/slideshow, music player, video playback, duplicate detection, and PWA support.
-
-The backend `FileCategory` type is `{ #photo; #pdf; #audio; #heic; #other }` -- it does NOT have a `#video` variant. Video files are therefore stored with category `#other`, which causes the frontend to misclassify them and display them inconsistently.
-
-Additionally, in `DropZone.tsx`, files with an empty or missing MIME type (common on some mobile browsers and OS drag-and-drop events) are silently rejected because the validation only checks MIME type without a proper extension-only fallback.
+A PWA personal cloud storage app with drag-and-drop file uploads (photos, PDFs, MP3s, HEICs, videos), folder management, photo album mode with music player, video playback, duplicate detection, and bulk download. The app currently has no authentication -- any visitor can access all files and folders. Backend uses blob-storage component. Frontend is React + TypeScript + Tailwind.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `#video` variant to `FileCategory` in the backend
+- Internet Identity (passkey/biometric) authentication using the Caffeine `authorization` component
+- Login screen shown to unauthenticated users, with an "Sign In with Passkey" button
+- On successful login, the main app is displayed
+- Logout button visible in the app header/sidebar
+- Per-user file isolation: each user's files and folders are stored under their own principal, so users cannot see each other's data
 
 ### Modify
-- `getMimeTypeCategory` in `fileUtils.ts` -- return `FileCategory.video` for `video/*` MIME types
-- `DropZone.tsx` `handleFiles` -- add fallback: if MIME type is empty, infer it from the file extension before rejecting
+- All backend functions (`uploadFile`, `listFiles`, `deleteFile`, `deleteFiles`, `getFileMetadata`, `moveFileToFolder`, `createFolder`, `listFolders`, `deleteFolder`, `renameFolder`) to scope data by caller principal
+- Frontend `App.tsx` to check auth state on load and gate the main UI behind login
+- Sidebar / header to include a logout button
 
 ### Remove
 - Nothing removed
 
 ## Implementation Plan
-1. Regenerate the Motoko backend with `FileCategory = { #photo; #pdf; #audio; #heic; #video; #other }` and all existing endpoints preserved
-2. Update `getMimeTypeCategory` in `fileUtils.ts` to map `video/*` to `FileCategory.video`
-3. Update `DropZone.tsx` `handleFiles` to accept files with empty MIME type if the extension matches a supported video or image format
-4. Update `getCategoryLabel` in `fileUtils.ts` to return "Video" for the video category
+1. Add `authorization` Caffeine component
+2. Regenerate Motoko backend with per-principal Map storage (keyed by principal) and authorization mixin included; all file and folder operations scoped to `caller`
+3. Update frontend:
+   - Wire `useAuth` hook from authorization component
+   - Show a branded login/welcome screen when unauthenticated
+   - Hide all file management UI until authenticated
+   - Add logout button to sidebar header
+   - Pass authenticated principal context where needed

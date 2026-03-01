@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Download, HardDrive } from "lucide-react";
+import { Download, HardDrive, Loader2, LogOut } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -9,8 +9,10 @@ import { FileCategory } from "./backend.d";
 import { DropZone } from "./components/DropZone";
 import { FileGrid } from "./components/FileGrid";
 import { FolderSidebar } from "./components/FolderSidebar";
+import { LoginScreen } from "./components/LoginScreen";
 import { MusicPlayer } from "./components/MusicPlayer";
 import { PhotoAlbum } from "./components/PhotoAlbum";
+import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { useListFiles, useListFolders } from "./hooks/useQueries";
 import { downloadFile, formatFileSize } from "./utils/fileUtils";
 
@@ -30,7 +32,9 @@ function StorageStats({
   );
 }
 
-export default function App() {
+/** Inner content — only rendered when authenticated; all hooks are unconditional here */
+function AppContent() {
+  const { clear } = useInternetIdentity();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [albumMode, setAlbumMode] = useState(false);
 
@@ -112,6 +116,16 @@ export default function App() {
                     <span className="hidden sm:inline">Download All</span>
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                  onClick={clear}
+                  title="Sign out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Sign out</span>
+                </Button>
               </motion.div>
             </div>
           </div>
@@ -197,4 +211,29 @@ export default function App() {
       </div>
     </TooltipProvider>
   );
+}
+
+/** Outer shell — handles auth state and renders the appropriate screen */
+export default function App() {
+  const { identity, isInitializing } = useInternetIdentity();
+
+  // Full-screen loader while the auth client checks stored credentials
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2
+          className="w-8 h-8 animate-spin"
+          style={{ color: "oklch(var(--primary))" }}
+        />
+      </div>
+    );
+  }
+
+  // Not authenticated — show login screen
+  if (!identity) {
+    return <LoginScreen />;
+  }
+
+  // Authenticated — show the full app
+  return <AppContent />;
 }
