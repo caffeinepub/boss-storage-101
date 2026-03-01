@@ -19,6 +19,7 @@ export type FileCategory = { 'pdf' : null } |
   { 'photo' : null };
 export interface FileMetadata {
   'originalFilename' : string,
+  'owner' : [] | [Principal],
   'blob' : ExternalBlob,
   'mimeType' : string,
   'uploadTimestamp' : Time,
@@ -29,11 +30,16 @@ export interface FileMetadata {
   'folderId' : [] | [string],
 }
 export interface Folder {
+  'owner' : [] | [Principal],
   'name' : string,
   'createdAt' : Time,
   'folderId' : string,
 }
 export type Time = bigint;
+export interface UserProfile { 'name' : string }
+export type UserRole = { 'admin' : null } |
+  { 'user' : null } |
+  { 'guest' : null };
 export interface _CaffeineStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -61,15 +67,23 @@ export interface _SERVICE {
     _CaffeineStorageRefillResult
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
+  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'claimLegacyData' : ActorMethod<[], bigint>,
   'createFolder' : ActorMethod<[string, string], Folder>,
   'deleteFile' : ActorMethod<[string], undefined>,
   'deleteFiles' : ActorMethod<[Array<string>], undefined>,
   'deleteFolder' : ActorMethod<[string], undefined>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getFileMetadata' : ActorMethod<[string], FileMetadata>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'isCallerAdmin' : ActorMethod<[], boolean>,
   'listFiles' : ActorMethod<[[] | [string]], Array<FileMetadata>>,
   'listFolders' : ActorMethod<[], Array<Folder>>,
   'moveFileToFolder' : ActorMethod<[string, [] | [string]], FileMetadata>,
   'renameFolder' : ActorMethod<[string, string], Folder>,
+  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'uploadFile' : ActorMethod<
     [
       string,

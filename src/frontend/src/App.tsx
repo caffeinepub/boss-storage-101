@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useQueryClient } from "@tanstack/react-query";
 import { Download, HardDrive, Loader2, LogOut } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { FileCategory } from "./backend.d";
 import { DropZone } from "./components/DropZone";
@@ -12,6 +13,7 @@ import { FolderSidebar } from "./components/FolderSidebar";
 import { LoginScreen } from "./components/LoginScreen";
 import { MusicPlayer } from "./components/MusicPlayer";
 import { PhotoAlbum } from "./components/PhotoAlbum";
+import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { useListFiles, useListFolders } from "./hooks/useQueries";
 import { downloadFile, formatFileSize } from "./utils/fileUtils";
@@ -35,8 +37,35 @@ function StorageStats({
 /** Inner content — only rendered when authenticated; all hooks are unconditional here */
 function AppContent() {
   const { clear } = useInternetIdentity();
+  const { actor, isFetching } = useActor();
+  const queryClient = useQueryClient();
+  const claimedRef = useRef(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [albumMode, setAlbumMode] = useState(false);
+
+  // Recover legacy files (uploaded before passkey was added) once per session
+  useEffect(() => {
+    if (!actor || isFetching || claimedRef.current) return;
+    claimedRef.current = true;
+
+    actor
+      .claimLegacyData()
+      .then((count) => {
+        const n = Number(count);
+        if (n > 0) {
+          toast.success(
+            `Recovered ${n} file${n !== 1 ? "s" : ""} from before your passkey was set up.`,
+            { duration: 6000 },
+          );
+          // Refresh file and folder lists so recovered files appear immediately
+          queryClient.invalidateQueries({ queryKey: ["files"] });
+          queryClient.invalidateQueries({ queryKey: ["folders"] });
+        }
+      })
+      .catch(() => {
+        // Silently ignore — legacy claim is best-effort
+      });
+  }, [actor, isFetching, queryClient]);
 
   // All files (for stats + sidebar counts)
   const { data: allFiles = [] } = useListFiles(null);

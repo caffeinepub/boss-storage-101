@@ -19,12 +19,19 @@ export const _CaffeineStorageRefillResult = IDL.Record({
   'success' : IDL.Opt(IDL.Bool),
   'topped_up_amount' : IDL.Opt(IDL.Nat),
 });
+export const UserRole = IDL.Variant({
+  'admin' : IDL.Null,
+  'user' : IDL.Null,
+  'guest' : IDL.Null,
+});
 export const Time = IDL.Int;
 export const Folder = IDL.Record({
+  'owner' : IDL.Opt(IDL.Principal),
   'name' : IDL.Text,
   'createdAt' : Time,
   'folderId' : IDL.Text,
 });
+export const UserProfile = IDL.Record({ 'name' : IDL.Text });
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
 export const FileCategory = IDL.Variant({
   'pdf' : IDL.Null,
@@ -36,6 +43,7 @@ export const FileCategory = IDL.Variant({
 });
 export const FileMetadata = IDL.Record({
   'originalFilename' : IDL.Text,
+  'owner' : IDL.Opt(IDL.Principal),
   'blob' : ExternalBlob,
   'mimeType' : IDL.Text,
   'uploadTimestamp' : Time,
@@ -73,11 +81,22 @@ export const idlService = IDL.Service({
       [],
     ),
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'claimLegacyData' : IDL.Func([], [IDL.Nat], []),
   'createFolder' : IDL.Func([IDL.Text, IDL.Text], [Folder], []),
   'deleteFile' : IDL.Func([IDL.Text], [], []),
   'deleteFiles' : IDL.Func([IDL.Vec(IDL.Text)], [], []),
   'deleteFolder' : IDL.Func([IDL.Text], [], []),
+  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getFileMetadata' : IDL.Func([IDL.Text], [FileMetadata], ['query']),
+  'getUserProfile' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Opt(UserProfile)],
+      ['query'],
+    ),
+  'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listFiles' : IDL.Func(
       [IDL.Opt(IDL.Text)],
       [IDL.Vec(FileMetadata)],
@@ -90,6 +109,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'renameFolder' : IDL.Func([IDL.Text, IDL.Text], [Folder], []),
+  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'uploadFile' : IDL.Func(
       [
         IDL.Text,
@@ -120,12 +140,19 @@ export const idlFactory = ({ IDL }) => {
     'success' : IDL.Opt(IDL.Bool),
     'topped_up_amount' : IDL.Opt(IDL.Nat),
   });
+  const UserRole = IDL.Variant({
+    'admin' : IDL.Null,
+    'user' : IDL.Null,
+    'guest' : IDL.Null,
+  });
   const Time = IDL.Int;
   const Folder = IDL.Record({
+    'owner' : IDL.Opt(IDL.Principal),
     'name' : IDL.Text,
     'createdAt' : Time,
     'folderId' : IDL.Text,
   });
+  const UserProfile = IDL.Record({ 'name' : IDL.Text });
   const ExternalBlob = IDL.Vec(IDL.Nat8);
   const FileCategory = IDL.Variant({
     'pdf' : IDL.Null,
@@ -137,6 +164,7 @@ export const idlFactory = ({ IDL }) => {
   });
   const FileMetadata = IDL.Record({
     'originalFilename' : IDL.Text,
+    'owner' : IDL.Opt(IDL.Principal),
     'blob' : ExternalBlob,
     'mimeType' : IDL.Text,
     'uploadTimestamp' : Time,
@@ -174,11 +202,22 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'claimLegacyData' : IDL.Func([], [IDL.Nat], []),
     'createFolder' : IDL.Func([IDL.Text, IDL.Text], [Folder], []),
     'deleteFile' : IDL.Func([IDL.Text], [], []),
     'deleteFiles' : IDL.Func([IDL.Vec(IDL.Text)], [], []),
     'deleteFolder' : IDL.Func([IDL.Text], [], []),
+    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getFileMetadata' : IDL.Func([IDL.Text], [FileMetadata], ['query']),
+    'getUserProfile' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(UserProfile)],
+        ['query'],
+      ),
+    'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listFiles' : IDL.Func(
         [IDL.Opt(IDL.Text)],
         [IDL.Vec(FileMetadata)],
@@ -191,6 +230,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'renameFolder' : IDL.Func([IDL.Text, IDL.Text], [Folder], []),
+    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'uploadFile' : IDL.Func(
         [
           IDL.Text,

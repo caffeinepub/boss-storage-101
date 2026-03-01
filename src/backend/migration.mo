@@ -1,11 +1,10 @@
 import List "mo:core/List";
 import Map "mo:core/Map";
-import Text "mo:core/Text";
 import Time "mo:core/Time";
+import Principal "mo:core/Principal";
 import Storage "blob-storage/Storage";
 
 module {
-  type OldFileCategory = { #photo; #pdf; #audio; #heic; #other };
   type OldFileMetadata = {
     fileId : Text;
     originalFilename : Text;
@@ -13,21 +12,22 @@ module {
     sizeBytes : Nat;
     uploadTimestamp : Time.Time;
     exifCaptureTimestamp : ?Time.Time;
-    category : OldFileCategory;
+    category : { #photo; #pdf; #audio; #heic; #other; #video };
     blob : Storage.ExternalBlob;
     folderId : ?Text;
   };
+
   type OldFolder = {
     folderId : Text;
     name : Text;
     createdAt : Time.Time;
   };
+
   type OldActor = {
     files : Map.Map<Text, OldFileMetadata>;
     folders : List.List<OldFolder>;
   };
 
-  type NewFileCategory = { #photo; #pdf; #audio; #heic; #other; #video };
   type NewFileMetadata = {
     fileId : Text;
     originalFilename : Text;
@@ -35,45 +35,44 @@ module {
     sizeBytes : Nat;
     uploadTimestamp : Time.Time;
     exifCaptureTimestamp : ?Time.Time;
-    category : NewFileCategory;
+    category : { #photo; #pdf; #audio; #heic; #other; #video };
     blob : Storage.ExternalBlob;
     folderId : ?Text;
+    owner : ?Principal;
   };
+
   type NewFolder = {
     folderId : Text;
     name : Text;
     createdAt : Time.Time;
+    owner : ?Principal;
   };
+
   type NewActor = {
     files : Map.Map<Text, NewFileMetadata>;
-    folders : List.List<NewFolder>;
+    folders : Map.Map<Text, NewFolder>;
   };
 
   public func run(old : OldActor) : NewActor {
-    let updatedFiles = old.files.map<Text, OldFileMetadata, NewFileMetadata>(
-      func(_id, oldFile) {
-        switch (oldFile.category) {
-          case (#photo) {
-            { oldFile with category = #photo : NewFileCategory };
-          };
-          case (#pdf) {
-            { oldFile with category = #pdf : NewFileCategory };
-          };
-          case (#audio) {
-            { oldFile with category = #audio : NewFileCategory };
-          };
-          case (#heic) {
-            { oldFile with category = #heic : NewFileCategory };
-          };
-          case (#other) {
-            { oldFile with category = #other : NewFileCategory };
-          };
-        };
+    let newFiles = old.files.map<Text, OldFileMetadata, NewFileMetadata>(
+      func(_id, file) {
+        { file with owner = null };
       }
     );
+
+    let newFolders = Map.empty<Text, NewFolder>();
+    for (folder in old.folders.values()) {
+      newFolders.add(
+        folder.folderId,
+        {
+          folder with owner = null;
+        },
+      );
+    };
+
     {
-      files = updatedFiles;
-      folders = old.folders;
+      files = newFiles;
+      folders = newFolders;
     };
   };
 };
