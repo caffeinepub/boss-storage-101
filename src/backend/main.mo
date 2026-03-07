@@ -10,11 +10,11 @@ import Runtime "mo:core/Runtime";
 
 import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
-import Migration "migration";
+
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
-(with migration = Migration.run)
+
 actor {
   // Initialize access control
   let accessControlState = AccessControl.initState();

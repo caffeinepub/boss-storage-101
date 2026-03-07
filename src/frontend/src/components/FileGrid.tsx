@@ -18,14 +18,42 @@ import type { FileMetadata } from "../backend.d";
 import { FileCategory } from "../backend.d";
 import type { Folder } from "../hooks/useQueries";
 import { useDeleteFile, useDeleteFiles } from "../hooks/useQueries";
-import { downloadFile, findDuplicates, isVideoMime } from "../utils/fileUtils";
+import {
+  downloadAsZip,
+  downloadFile,
+  findDuplicates,
+  isVideoMime,
+} from "../utils/fileUtils";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { DuplicatesDialog } from "./DuplicatesDialog";
 import { FileCard } from "./FileCard";
 import { PhotoLightbox } from "./PhotoLightbox";
 import { VideoLightbox } from "./VideoLightbox";
 
-type FilterTab = "all" | "photos" | "videos" | "pdfs" | "audio" | "heic";
+type FilterTab =
+  | "all"
+  | "photos"
+  | "videos"
+  | "mp4"
+  | "mov"
+  | "pdfs"
+  | "audio"
+  | "heic";
+
+function isMP4File(f: { mimeType: string; originalFilename: string }): boolean {
+  return (
+    f.mimeType === "video/mp4" ||
+    f.originalFilename.toLowerCase().endsWith(".mp4")
+  );
+}
+
+function isMOVFile(f: { mimeType: string; originalFilename: string }): boolean {
+  return (
+    f.mimeType === "video/quicktime" ||
+    f.mimeType === "video/mov" ||
+    f.originalFilename.toLowerCase().endsWith(".mov")
+  );
+}
 
 interface FileGridProps {
   files: FileMetadata[];
@@ -70,6 +98,10 @@ export function FileGrid({
         return f.category === FileCategory.photo;
       case "videos":
         return f.category === FileCategory.video || isVideoMime(f.mimeType);
+      case "mp4":
+        return isMP4File(f);
+      case "mov":
+        return isMOVFile(f);
       case "pdfs":
         return f.category === FileCategory.pdf;
       case "audio":
@@ -172,15 +204,21 @@ export function FileGrid({
   const handleDownloadAll = useCallback(() => {
     if (filteredFiles.length === 0) return;
     const actualDownload = async () => {
-      toast.info(`Downloading ${filteredFiles.length} file(s)...`);
-      for (const file of filteredFiles) {
-        try {
-          await downloadFile(file.blob, file.originalFilename);
-          await new Promise((res) => setTimeout(res, 200));
-        } catch {
-          toast.error(`Failed to download "${file.originalFilename}"`);
-        }
-      }
+      const toastId = toast.loading(
+        `Preparing ZIP (0 / ${filteredFiles.length})...`,
+      );
+      await downloadAsZip(
+        filteredFiles,
+        "boss-storage-all.zip",
+        (done, total) => {
+          toast.loading(`Preparing ZIP (${done} / ${total})...`, {
+            id: toastId,
+          });
+        },
+      );
+      toast.success(`Downloaded ${filteredFiles.length} file(s) as ZIP`, {
+        id: toastId,
+      });
     };
     checkDuplicatesBeforeDownload(filteredFiles, actualDownload);
   }, [filteredFiles, checkDuplicatesBeforeDownload]);
@@ -194,15 +232,21 @@ export function FileGrid({
     );
     if (mediaFiles.length === 0) return;
     const actualDownload = async () => {
-      toast.info(`Downloading ${mediaFiles.length} photos & videos...`);
-      for (const file of mediaFiles) {
-        try {
-          await downloadFile(file.blob, file.originalFilename);
-          await new Promise((res) => setTimeout(res, 200));
-        } catch {
-          toast.error(`Failed to download "${file.originalFilename}"`);
-        }
-      }
+      const toastId = toast.loading(
+        `Preparing ZIP (0 / ${mediaFiles.length})...`,
+      );
+      await downloadAsZip(
+        mediaFiles,
+        "boss-storage-media.zip",
+        (done, total) => {
+          toast.loading(`Preparing ZIP (${done} / ${total})...`, {
+            id: toastId,
+          });
+        },
+      );
+      toast.success(`Downloaded ${mediaFiles.length} photos & videos as ZIP`, {
+        id: toastId,
+      });
     };
     checkDuplicatesBeforeDownload(mediaFiles, actualDownload);
   }, [files, checkDuplicatesBeforeDownload]);
@@ -230,6 +274,8 @@ export function FileGrid({
     videos: files.filter(
       (f) => f.category === FileCategory.video || isVideoMime(f.mimeType),
     ).length,
+    mp4: files.filter(isMP4File).length,
+    mov: files.filter(isMOVFile).length,
     pdfs: files.filter((f) => f.category === FileCategory.pdf).length,
     audio: files.filter((f) => f.category === FileCategory.audio).length,
     heic: files.filter((f) => f.category === FileCategory.heic).length,
@@ -313,10 +359,31 @@ export function FileGrid({
             <TabsTrigger
               value="videos"
               className="text-xs h-7 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              data-ocid="filegrid.videos.tab"
             >
               Videos{" "}
               {tabCounts.videos > 0 && (
                 <span className="ml-1 opacity-60">{tabCounts.videos}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="mp4"
+              className="text-xs h-7 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              data-ocid="filegrid.mp4.tab"
+            >
+              MP4{" "}
+              {tabCounts.mp4 > 0 && (
+                <span className="ml-1 opacity-60">{tabCounts.mp4}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="mov"
+              className="text-xs h-7 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              data-ocid="filegrid.mov.tab"
+            >
+              MOV{" "}
+              {tabCounts.mov > 0 && (
+                <span className="ml-1 opacity-60">{tabCounts.mov}</span>
               )}
             </TabsTrigger>
             <TabsTrigger
@@ -566,6 +633,18 @@ function EmptyState({
       sub: hasFiles
         ? "Upload videos to see them here"
         : "Drag and drop MP4, MOV, AVI, or WebM files to get started",
+    },
+    mp4: {
+      title: "No MP4 files yet",
+      sub: hasFiles
+        ? "Upload MP4 videos to see them here"
+        : "Drag and drop .mp4 files to get started",
+    },
+    mov: {
+      title: "No MOV files yet",
+      sub: hasFiles
+        ? "Upload MOV videos to see them here"
+        : "Drag and drop .mov files to get started",
     },
     pdfs: {
       title: "No PDFs yet",

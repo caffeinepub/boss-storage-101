@@ -1,31 +1,30 @@
 # BOSS Storage 101
 
 ## Current State
-A PWA personal cloud storage app with drag-and-drop file uploads (photos, PDFs, MP3s, HEICs, videos), folder management, photo album mode with music player, video playback, duplicate detection, and bulk download. The app currently has no authentication -- any visitor can access all files and folders. Backend uses blob-storage component. Frontend is React + TypeScript + Tailwind.
+FileGrid.tsx has a "Videos" tab that shows all video files together (MP4, MOV, AVI, WebM, MKV, etc.) based on `FileCategory.video` or any video MIME type.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Internet Identity (passkey/biometric) authentication using the Caffeine `authorization` component
-- Login screen shown to unauthenticated users, with an "Sign In with Passkey" button
-- On successful login, the main app is displayed
-- Logout button visible in the app header/sidebar
-- Per-user file isolation: each user's files and folders are stored under their own principal, so users cannot see each other's data
+- "MP4" tab that filters files where `mimeType === "video/mp4"` or filename ends with `.mp4`
+- "MOV" tab that filters files where `mimeType === "video/quicktime"` or filename ends with `.mov`
+- Tab counts for MP4 and MOV
+- Empty state messages for mp4 and mov tabs
 
 ### Modify
-- All backend functions (`uploadFile`, `listFiles`, `deleteFile`, `deleteFiles`, `getFileMetadata`, `moveFileToFolder`, `createFolder`, `listFolders`, `deleteFolder`, `renameFolder`) to scope data by caller principal
-- Frontend `App.tsx` to check auth state on load and gate the main UI behind login
-- Sidebar / header to include a logout button
+- `FilterTab` type to include `"mp4"` and `"mov"`
+- `filteredFiles` switch to handle the two new cases
+- `tabCounts` object to include mp4 and mov counts
+- `EmptyState` messages to include mp4 and mov entries
+- TabsList to render the two new tab triggers (after the Videos tab)
 
 ### Remove
-- Nothing removed
+Nothing removed — the existing Videos tab stays for all other video types.
 
 ## Implementation Plan
-1. Add `authorization` Caffeine component
-2. Regenerate Motoko backend with per-principal Map storage (keyed by principal) and authorization mixin included; all file and folder operations scoped to `caller`
-3. Update frontend:
-   - Wire `useAuth` hook from authorization component
-   - Show a branded login/welcome screen when unauthenticated
-   - Hide all file management UI until authenticated
-   - Add logout button to sidebar header
-   - Pass authenticated principal context where needed
+1. Extend `FilterTab` type with `"mp4" | "mov"`
+2. Add helper checks: isMP4(file) and isMOV(file)
+3. Add mp4/mov cases to filteredFiles switch
+4. Add mp4/mov entries to tabCounts
+5. Render two new TabsTrigger elements (MP4 and MOV) after Videos in the TabsList
+6. Add empty state messages for mp4 and mov

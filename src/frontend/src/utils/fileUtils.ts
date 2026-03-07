@@ -71,6 +71,44 @@ export async function downloadFile(
   URL.revokeObjectURL(url);
 }
 
+export async function downloadAsZip(
+  files: FileMetadata[],
+  zipFilename: string,
+  onProgress?: (done: number, total: number) => void,
+): Promise<void> {
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+
+  const getFolder = (file: FileMetadata): string => {
+    if (file.category === FileCategory.video || isVideoMime(file.mimeType))
+      return "Videos";
+    if (file.category === FileCategory.photo) return "Photos";
+    if (file.category === FileCategory.heic) return "Photos";
+    if (file.category === FileCategory.audio) return "Audio";
+    if (file.category === FileCategory.pdf) return "PDFs";
+    return "Other";
+  };
+
+  let done = 0;
+  for (const file of files) {
+    const bytes = await file.blob.getBytes();
+    const folder = getFolder(file);
+    zip.folder(folder)!.file(file.originalFilename, bytes);
+    done++;
+    onProgress?.(done, files.length);
+  }
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = zipFilename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export async function extractExifDate(file: File): Promise<bigint | null> {
   try {
     // Only try to extract EXIF from JPEG images

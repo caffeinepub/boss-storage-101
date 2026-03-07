@@ -16,7 +16,7 @@ import { PhotoAlbum } from "./components/PhotoAlbum";
 import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { useListFiles, useListFolders } from "./hooks/useQueries";
-import { downloadFile, formatFileSize } from "./utils/fileUtils";
+import { downloadAsZip, formatFileSize } from "./utils/fileUtils";
 
 function StorageStats({
   files,
@@ -82,14 +82,18 @@ function AppContent() {
 
   const handleDownloadAll = async () => {
     if (files.length === 0) return;
-    toast.info(`Downloading ${files.length} file(s)...`);
-    for (const file of files) {
-      try {
-        await downloadFile(file.blob, file.originalFilename);
-        await new Promise((res) => setTimeout(res, 250));
-      } catch {
-        toast.error(`Failed to download "${file.originalFilename}"`);
-      }
+    const toastId = toast.loading(`Preparing ZIP (0 / ${files.length})...`);
+    try {
+      await downloadAsZip(files, "boss-storage-all.zip", (done, total) => {
+        toast.loading(`Preparing ZIP (${done} / ${total})...`, {
+          id: toastId,
+        });
+      });
+      toast.success(`Downloaded ${files.length} file(s) as ZIP`, {
+        id: toastId,
+      });
+    } catch {
+      toast.error("Failed to create ZIP", { id: toastId });
     }
   };
 
