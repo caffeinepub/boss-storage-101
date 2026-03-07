@@ -73,8 +73,9 @@ export function FileGrid({
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [videoLightboxFile, setVideoLightboxFile] =
-    useState<FileMetadata | null>(null);
+  const [videoLightboxIndex, setVideoLightboxIndex] = useState<number | null>(
+    null,
+  );
   const [deleteTarget, setDeleteTarget] = useState<{
     ids: string[];
     filename?: string;
@@ -114,6 +115,9 @@ export function FileGrid({
   });
 
   const photoFiles = files.filter((f) => f.category === FileCategory.photo);
+  const videoFiles = files.filter(
+    (f) => f.category === FileCategory.video || isVideoMime(f.mimeType),
+  );
 
   const handleSelect = useCallback((fileId: string) => {
     setSelectedIds((prev) => {
@@ -533,7 +537,10 @@ export function FileGrid({
               onSelect={handleSelect}
               onDelete={handleDeleteSingle}
               onOpenLightbox={handleOpenLightbox}
-              onOpenVideoPlayer={(f) => setVideoLightboxFile(f)}
+              onOpenVideoPlayer={(f) => {
+                const idx = videoFiles.findIndex((v) => v.fileId === f.fileId);
+                if (idx !== -1) setVideoLightboxIndex(idx);
+              }}
               index={index}
               folders={folders}
               currentFolderName={selectedFolderName}
@@ -553,10 +560,12 @@ export function FileGrid({
       )}
 
       {/* Video Lightbox */}
-      {videoLightboxFile && (
+      {videoLightboxIndex !== null && (
         <VideoLightbox
-          file={videoLightboxFile}
-          onClose={() => setVideoLightboxFile(null)}
+          files={videoFiles}
+          currentIndex={videoLightboxIndex}
+          onNavigate={setVideoLightboxIndex}
+          onClose={() => setVideoLightboxIndex(null)}
         />
       )}
 

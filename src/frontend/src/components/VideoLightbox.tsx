@@ -1,34 +1,50 @@
-import { X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import type { FileMetadata } from "../backend.d";
 import { formatFileSize } from "../utils/fileUtils";
 
 interface VideoLightboxProps {
-  file: FileMetadata;
+  files: FileMetadata[];
+  currentIndex: number;
+  onNavigate: (index: number) => void;
   onClose: () => void;
 }
 
-export function VideoLightbox({ file, onClose }: VideoLightboxProps) {
+export function VideoLightbox({
+  files,
+  currentIndex,
+  onNavigate,
+  onClose,
+}: VideoLightboxProps) {
+  const file = files[currentIndex];
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Load video URL on mount using direct URL (same pattern as PhotoCard)
+  // Load video URL whenever the current index changes
   useEffect(() => {
+    if (!file) return;
+    setIsLoading(true);
+    setVideoUrl(null);
     const url = file.blob.getDirectURL();
     setVideoUrl(url);
-    setIsLoading(false);
   }, [file]);
 
-  // Escape key listener
+  // Keyboard: Escape to close, ArrowLeft/ArrowRight to navigate
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+      } else if (e.key === "ArrowLeft" && currentIndex > 0) {
+        onNavigate(currentIndex - 1);
+      } else if (e.key === "ArrowRight" && currentIndex < files.length - 1) {
+        onNavigate(currentIndex + 1);
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, onNavigate, currentIndex, files.length]);
 
   // Prevent body scroll while lightbox is open
   useEffect(() => {
@@ -38,6 +54,8 @@ export function VideoLightbox({ file, onClose }: VideoLightboxProps) {
     };
   }, []);
 
+  if (!file) return null;
+
   // Derive a readable format label
   const formatLabel = file.mimeType
     .replace("video/", "")
@@ -46,6 +64,9 @@ export function VideoLightbox({ file, onClose }: VideoLightboxProps) {
     .replace("msvideo", "AVI")
     .replace("matroska", "MKV")
     .toUpperCase();
+
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < files.length - 1;
 
   return (
     <AnimatePresence>
@@ -71,9 +92,16 @@ export function VideoLightbox({ file, onClose }: VideoLightboxProps) {
           {/* Top bar */}
           <div className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-md rounded-t-xl border border-white/10">
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-white truncate">
-                {file.originalFilename}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-white truncate">
+                  {file.originalFilename}
+                </h3>
+                {files.length > 1 && (
+                  <span className="text-xs text-white/40 shrink-0">
+                    {currentIndex + 1} / {files.length}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-white/50 mt-0.5">
                 {formatLabel} · {formatFileSize(file.sizeBytes)}
               </p>
@@ -90,7 +118,7 @@ export function VideoLightbox({ file, onClose }: VideoLightboxProps) {
             </button>
           </div>
 
-          {/* Video area */}
+          {/* Video area with nav arrows */}
           <div className="relative bg-black border-x border-b border-white/10 rounded-b-xl overflow-hidden">
             {isLoading && (
               <div className="flex items-center justify-center h-64">
@@ -109,6 +137,32 @@ export function VideoLightbox({ file, onClose }: VideoLightboxProps) {
                 style={{ display: isLoading ? "none" : "block" }}
                 onLoadedData={() => setIsLoading(false)}
               />
+            )}
+
+            {/* Prev arrow */}
+            {hasPrev && (
+              <button
+                type="button"
+                data-ocid="video_lightbox.prev_button"
+                onClick={() => onNavigate(currentIndex - 1)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/75 border border-white/20 flex items-center justify-center text-white/80 hover:text-white transition-all backdrop-blur-sm z-10"
+                aria-label="Previous video"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* Next arrow */}
+            {hasNext && (
+              <button
+                type="button"
+                data-ocid="video_lightbox.next_button"
+                onClick={() => onNavigate(currentIndex + 1)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/75 border border-white/20 flex items-center justify-center text-white/80 hover:text-white transition-all backdrop-blur-sm z-10"
+                aria-label="Next video"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             )}
           </div>
         </motion.div>

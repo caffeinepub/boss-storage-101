@@ -1,30 +1,23 @@
 # BOSS Storage 101
 
 ## Current State
-FileGrid.tsx has a "Videos" tab that shows all video files together (MP4, MOV, AVI, WebM, MKV, etc.) based on `FileCategory.video` or any video MIME type.
+VideoLightbox accepts a single `file: FileMetadata` prop and plays that one video with no navigation. FileGrid opens it by passing `videoLightboxFile` (a single file). There are no prev/next controls in the video player.
 
 ## Requested Changes (Diff)
 
 ### Add
-- "MP4" tab that filters files where `mimeType === "video/mp4"` or filename ends with `.mp4`
-- "MOV" tab that filters files where `mimeType === "video/quicktime"` or filename ends with `.mov`
-- Tab counts for MP4 and MOV
-- Empty state messages for mp4 and mov tabs
+- Left/right arrow buttons in the VideoLightbox to navigate to the previous/next video in sequence
+- Keyboard arrow key support (ArrowLeft / ArrowRight) for navigation
+- Video counter indicator (e.g. "2 / 5") in the top bar
+- Auto-load the new video when navigating (reset player state)
 
 ### Modify
-- `FilterTab` type to include `"mp4"` and `"mov"`
-- `filteredFiles` switch to handle the two new cases
-- `tabCounts` object to include mp4 and mov counts
-- `EmptyState` messages to include mp4 and mov entries
-- TabsList to render the two new tab triggers (after the Videos tab)
+- `VideoLightbox` props: replace single `file` with `files: FileMetadata[]` and `currentIndex: number`, add `onNavigate: (index: number) => void`
+- `FileGrid`: compute a `videoFiles` list (all files that are video), open lightbox by index into that list, pass `videoFiles` + `currentIndex` + `onNavigate` to VideoLightbox
 
 ### Remove
-Nothing removed — the existing Videos tab stays for all other video types.
+- Nothing removed
 
 ## Implementation Plan
-1. Extend `FilterTab` type with `"mp4" | "mov"`
-2. Add helper checks: isMP4(file) and isMOV(file)
-3. Add mp4/mov cases to filteredFiles switch
-4. Add mp4/mov entries to tabCounts
-5. Render two new TabsTrigger elements (MP4 and MOV) after Videos in the TabsList
-6. Add empty state messages for mp4 and mov
+1. Update `VideoLightbox.tsx` — accept `files`, `currentIndex`, `onNavigate`; derive current file from index; add prev/next arrow buttons; add ArrowLeft/ArrowRight keyboard handler; show "N / total" counter; reset video on index change
+2. Update `FileGrid.tsx` — build `videoFiles` array (video category or isVideoMime); change `videoLightboxFile` state to `videoLightboxIndex: number | null`; open by index; pass updated props to VideoLightbox

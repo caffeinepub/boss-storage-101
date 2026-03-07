@@ -71,14 +71,127 @@ export async function downloadFile(
   URL.revokeObjectURL(url);
 }
 
+// ---------------------------------------------------------------------------
+// Minimal ZIP builder (no external deps, STORE method – no compression)
+// ---------------------------------------------------------------------------
+function uint16LE(n: number): number[] {
+  return [n & 0xff, (n >> 8) & 0xff];
+}
+function uint32LE(n: number): number[] {
+  return [n & 0xff, (n >> 8) & 0xff, (n >> 16) & 0xff, (n >> 24) & 0xff];
+}
+function crc32(data: Uint8Array): number {
+  let crc = 0xffffffff;
+  const table = crc32Table();
+  for (let i = 0; i < data.length; i++) {
+    crc = (crc >>> 8) ^ table[(crc ^ data[i]) & 0xff];
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+function crc32Table(): number[] {
+  const t: number[] = [];
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[i] = c;
+  }
+  return t;
+}
+function buildZip(entries: { path: string; data: Uint8Array }[]): Uint8Array {
+  const enc = new TextEncoder();
+  const localHeaders: Uint8Array[] = [];
+  const centralHeaders: Uint8Array[] = [];
+  let offset = 0;
+
+  for (const entry of entries) {
+    const pathBytes = enc.encode(entry.path);
+    const crc = crc32(entry.data);
+    const size = entry.data.length;
+
+    // Local file header
+    const lh = new Uint8Array([
+      0x50,
+      0x4b,
+      0x03,
+      0x04, // signature
+      ...uint16LE(20), // version needed
+      ...uint16LE(0), // flags
+      ...uint16LE(0), // compression (STORE)
+      ...uint16LE(0), // mod time
+      ...uint16LE(0), // mod date
+      ...uint32LE(crc),
+      ...uint32LE(size),
+      ...uint32LE(size),
+      ...uint16LE(pathBytes.length),
+      ...uint16LE(0), // extra field length
+      ...pathBytes,
+    ]);
+
+    // Central directory header
+    const ch = new Uint8Array([
+      0x50,
+      0x4b,
+      0x01,
+      0x02, // signature
+      ...uint16LE(20), // version made by
+      ...uint16LE(20), // version needed
+      ...uint16LE(0), // flags
+      ...uint16LE(0), // compression
+      ...uint16LE(0), // mod time
+      ...uint16LE(0), // mod date
+      ...uint32LE(crc),
+      ...uint32LE(size),
+      ...uint32LE(size),
+      ...uint16LE(pathBytes.length),
+      ...uint16LE(0), // extra
+      ...uint16LE(0), // comment
+      ...uint16LE(0), // disk start
+      ...uint16LE(0), // internal attr
+      ...uint32LE(0), // external attr
+      ...uint32LE(offset), // local header offset
+      ...pathBytes,
+    ]);
+
+    localHeaders.push(lh);
+    localHeaders.push(entry.data);
+    centralHeaders.push(ch);
+    offset += lh.length + size;
+  }
+
+  const centralStart = offset;
+  const centralSize = centralHeaders.reduce((s, h) => s + h.length, 0);
+
+  const eocd = new Uint8Array([
+    0x50,
+    0x4b,
+    0x05,
+    0x06, // signature
+    ...uint16LE(0), // disk number
+    ...uint16LE(0), // disk with central dir
+    ...uint16LE(entries.length),
+    ...uint16LE(entries.length),
+    ...uint32LE(centralSize),
+    ...uint32LE(centralStart),
+    ...uint16LE(0), // comment length
+  ]);
+
+  const all = [...localHeaders, ...centralHeaders, eocd];
+  const total = all.reduce((s, a) => s + a.length, 0);
+  const result = new Uint8Array(total);
+  let pos = 0;
+  for (const chunk of all) {
+    result.set(chunk, pos);
+    pos += chunk.length;
+  }
+  return result;
+}
+// ---------------------------------------------------------------------------
+
 export async function downloadAsZip(
   files: FileMetadata[],
   zipFilename: string,
   onProgress?: (done: number, total: number) => void,
 ): Promise<void> {
-  const JSZip = (await import("jszip")).default;
-  const zip = new JSZip();
-
   const getFolder = (file: FileMetadata): string => {
     if (file.category === FileCategory.video || isVideoMime(file.mimeType))
       return "Videos";
@@ -89,16 +202,20 @@ export async function downloadAsZip(
     return "Other";
   };
 
+  const entries: { path: string; data: Uint8Array }[] = [];
   let done = 0;
   for (const file of files) {
     const bytes = await file.blob.getBytes();
     const folder = getFolder(file);
-    zip.folder(folder)!.file(file.originalFilename, bytes);
+    entries.push({ path: `${folder}/${file.originalFilename}`, data: bytes });
     done++;
     onProgress?.(done, files.length);
   }
 
-  const blob = await zip.generateAsync({ type: "blob" });
+  const zipBytes = buildZip(entries);
+  const blob = new Blob([zipBytes.buffer as ArrayBuffer], {
+    type: "application/zip",
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
