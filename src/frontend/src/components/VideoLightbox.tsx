@@ -1,8 +1,8 @@
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import type { FileMetadata } from "../backend.d";
-import { formatFileSize } from "../utils/fileUtils";
+import { downloadFile, formatFileSize } from "../utils/fileUtils";
 
 interface VideoLightboxProps {
   files: FileMetadata[];
@@ -107,11 +107,25 @@ export function VideoLightbox({
               </p>
             </div>
 
+            {/* Download button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                void downloadFile(file.blob, file.originalFilename);
+              }}
+              className="ml-2 flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs transition-all shrink-0"
+              aria-label="Download video"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Download</span>
+            </button>
+
             {/* Close button */}
             <button
               type="button"
               onClick={onClose}
-              className="ml-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-all shrink-0"
+              className="ml-2 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-all shrink-0"
               aria-label="Close video player"
             >
               <X className="w-4 h-4" />

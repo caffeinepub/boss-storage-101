@@ -56,9 +56,25 @@ export function formatDateShort(date: Date): string {
 }
 
 export async function downloadFile(
-  blob: { getBytes(): Promise<Uint8Array<ArrayBuffer>> },
+  blob: {
+    getBytes(): Promise<Uint8Array<ArrayBuffer>>;
+    getDirectURL?(): string;
+  },
   filename: string,
 ): Promise<void> {
+  // Prefer direct URL (no memory overhead, works for large files)
+  if (typeof blob.getDirectURL === "function") {
+    const url = blob.getDirectURL();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.target = "_blank";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return;
+  }
+  // Fallback: fetch bytes into memory (small files only)
   const bytes = await blob.getBytes();
   const blobObj = new Blob([bytes]);
   const url = URL.createObjectURL(blobObj);
