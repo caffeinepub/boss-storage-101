@@ -25,6 +25,7 @@ import {
   Music,
   Pause,
   Play,
+  Share2,
   Trash2,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -38,6 +39,7 @@ import {
   formatDateShort,
   formatFileSize,
   isVideoMime,
+  shareFile,
   timestampToDate,
 } from "../utils/fileUtils";
 
@@ -317,6 +319,22 @@ function PhotoCard({
           </TooltipTrigger>
           <TooltipContent>Download</TooltipContent>
         </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              data-ocid="photo_card.share_button"
+              onClick={(e) => {
+                e.stopPropagation();
+                void shareFile(file.blob, file.originalFilename, file.mimeType);
+              }}
+              className="w-7 h-7 rounded bg-black/60 hover:bg-black/80 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Share</TooltipContent>
+        </Tooltip>
         <DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -481,6 +499,18 @@ function VideoCard({
           >
             <Download className="w-3 h-3" />
             Download
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            data-ocid="video_card.share_button"
+            className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+            onClick={(e) => {
+              e.stopPropagation();
+              void shareFile(file.blob, file.originalFilename, file.mimeType);
+            }}
+          >
+            <Share2 className="w-3 h-3" />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

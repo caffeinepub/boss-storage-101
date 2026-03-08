@@ -1,10 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { ChevronLeft, ChevronRight, Download, Mail, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Share2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect } from "react";
 import type { FileMetadata } from "../backend.d";
@@ -13,6 +8,7 @@ import {
   downloadFile,
   formatDateTime,
   formatFileSize,
+  shareFile,
   timestampToDate,
 } from "../utils/fileUtils";
 
@@ -74,6 +70,14 @@ export function PhotoLightbox({
     }
   };
 
+  const handleShare = async () => {
+    try {
+      await shareFile(file.blob, file.originalFilename, file.mimeType);
+    } catch {
+      // silent
+    }
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -129,23 +133,17 @@ export function PhotoLightbox({
                 Download
               </Button>
 
-              {/* Email (disabled) */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 gap-1.5 text-xs opacity-40 cursor-not-allowed"
-                    disabled
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    Email
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>Email feature not available on current plan</p>
-                </TooltipContent>
-              </Tooltip>
+              {/* Share */}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleShare}
+                data-ocid="photo_lightbox.share_button"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                Share
+              </Button>
 
               {/* Close */}
               <Button

@@ -1,8 +1,8 @@
-import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Share2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import type { FileMetadata } from "../backend.d";
-import { downloadFile, formatFileSize } from "../utils/fileUtils";
+import { downloadFile, formatFileSize, shareFile } from "../utils/fileUtils";
 
 interface VideoLightboxProps {
   files: FileMetadata[];
@@ -106,6 +106,21 @@ export function VideoLightbox({
                 {formatLabel} · {formatFileSize(file.sizeBytes)}
               </p>
             </div>
+
+            {/* Share button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                void shareFile(file.blob, file.originalFilename, file.mimeType);
+              }}
+              className="ml-2 flex items-center gap-1.5 px-3 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs transition-all shrink-0"
+              aria-label="Share video"
+              data-ocid="video_lightbox.share_button"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Share</span>
+            </button>
 
             {/* Download button */}
             <button

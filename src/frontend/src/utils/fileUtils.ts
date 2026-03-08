@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import type { FileMetadata } from "../backend.d";
 import { FileCategory } from "../backend.d";
 
@@ -294,6 +295,48 @@ export function findDuplicates(files: FileMetadata[]): FileMetadata[][] {
     groups.get(key)!.push(file);
   }
   return Array.from(groups.values()).filter((g) => g.length > 1);
+}
+
+export async function shareFile(
+  blob: { getDirectURL: () => string; getBytes: () => Promise<Uint8Array> },
+  filename: string,
+  mimeType: string,
+): Promise<void> {
+  const url = blob.getDirectURL();
+
+  // Try sharing as a File object (shows as attachment in Messages, WhatsApp, etc.)
+  if (typeof navigator !== "undefined" && navigator.canShare) {
+    try {
+      const bytes = await blob.getBytes();
+      const file = new File([bytes as Uint8Array<ArrayBuffer>], filename, {
+        type: mimeType,
+      });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      }
+    } catch {
+      // Fall through to URL share
+    }
+  }
+
+  // Try sharing just the URL (still opens the native share sheet on mobile)
+  if (typeof navigator !== "undefined" && navigator.share) {
+    try {
+      await navigator.share({ title: filename, url });
+      return;
+    } catch {
+      // Fall through to clipboard
+    }
+  }
+
+  // Desktop fallback: copy URL to clipboard
+  try {
+    await navigator.clipboard.writeText(url);
+    toast.success("Link copied to clipboard");
+  } catch {
+    // silent
+  }
 }
 
 export function getFileExtension(filename: string): string {
